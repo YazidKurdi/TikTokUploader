@@ -33,21 +33,35 @@ class VideoEditor:
         """
 
         subclip = self.video.subclip(start, end)
-        text_clip_size = 200
-        x_pos = self.width // 2 - text_clip_size // 2
-        y_pos = 250
+        order_text_clip_size = 300
+        order_x_pos = self.width // 2 - order_text_clip_size // 2
+        order_y_pos = 350
 
-        text_clip = (
-            TextClip(text, fontsize=150, color='white', bg_color='gray35', size=(text_clip_size, 0), font='Lane')
-            .set_opacity(0.5)
-            .set_duration(4)
+        title_text_clip_size = 450
+        title_x_pos = self.width // 2 - title_text_clip_size // 2
+        title_y_pos = 150
+
+        order_text_clip = (
+            TextClip(text, color='#ebde34', size=(order_text_clip_size, 0), font='Lane')
+            .set_opacity(0.7)
+            .set_duration(7)
             .crossfadein(0.5)
             .crossfadeout(0.5)
-            .set_position((x_pos, y_pos))
+            .set_position((order_x_pos, order_y_pos))
         )
 
+        title_text_clip = (
+            TextClip(self.file_name, color='#ebde34', size = (title_text_clip_size,None), fontsize=50, font='Lane',align = 'center',method='caption')
+            .set_opacity(0.7)
+            .set_duration(7)
+            .crossfadein(0.5)
+            .crossfadeout(0.5)
+            .set_position((title_x_pos, title_y_pos))
+        )
+        title_text_clip.h
 
-        composite_clip = CompositeVideoClip([subclip, text_clip])
+
+        composite_clip = CompositeVideoClip([subclip, order_text_clip,title_text_clip])
         return composite_clip
 
     def save_clips_with_text_by_duration(self, num_clips: int, clip_duration: float, file_name: str) -> None:
@@ -92,7 +106,7 @@ class VideoEditor:
             subclip = self.create_subclip_with_text(start, end, f" Part {i + 1}/{num_clips}")
             subclip_file_name = f"{self.file_name}_Part{i + 1}.mp4"
             subclip_path = os.path.join(file_directory, subclip_file_name)
-            subclip.write_videofile(subclip_path)
+            subclip.write_videofile(subclip_path,bitrate='2000k')
 
 l = VideoEditor('Adnan Confronts A Group Of Hindutva! Adnan and Visitor Speakers Corner.mp4')
-l.save_clips_with_text(3)
+l.save_clips_with_text(40)
