@@ -1,4 +1,5 @@
 from moviepy.editor import *
+import os
 
 
 class VideoEditor:
@@ -14,10 +15,28 @@ class VideoEditor:
         file_path (str): The path of the video file.
         """
 
-        self.video = VideoFileClip(file_path, target_resolution=(1920,1080))
+        self.video = VideoFileClip(file_path)
         self.length = self.video.duration
-        self.file_name = self.video.filename
-        self.width, _ = self.video.size
+        self.file_name = os.path.splitext(os.path.basename(self.video.filename))[0]
+
+        self.crop_video(self.width, self.height)
+        self.resize_video(1080, 1920)
+
+    @property
+    def width(self):
+        return self.video.size[0]
+
+    @property
+    def height(self):
+        return self.video.size[1]
+    def crop_video(self, width, height):
+        crop_width = width * 1920 / 1080
+        x1, x2 = (width - crop_width) // 2, (width + crop_width) // 2
+        y1, y2 = 0, height
+        self.video = vfx.crop(self.video, x1=x1, y1=y1, x2=x2, y2=y2)
+
+    def resize_video(self, width, height):
+        self.video = self.video.resize((width, height))
 
     def create_subclip_with_text(self, start: float, end: float, text: str) -> CompositeVideoClip:
         """
@@ -33,32 +52,45 @@ class VideoEditor:
         """
 
         subclip = self.video.subclip(start, end)
-        order_text_clip_size = 300
-        order_x_pos = self.width // 2 - order_text_clip_size // 2
-        order_y_pos = 350
+        margin = 50  # Margin from the edges of the frame
 
+        # Calculate the position of the title text
         title_text_clip_size = 450
-        title_x_pos = self.width // 2 - title_text_clip_size // 2
-        title_y_pos = 150
-
-        order_text_clip = (
-            TextClip(text, color='#ebde34', size=(order_text_clip_size, 0), font='Lane')
-            .set_opacity(0.7)
-            .set_duration(7)
-            .crossfadein(0.5)
-            .crossfadeout(0.5)
-            .set_position((order_x_pos, order_y_pos))
+        title_text_clip = TextClip(
+            self.file_name,
+            color="#fce303",
+            size=(title_text_clip_size, None),
+            fontsize=50,
+            font="Amiri-bold",
+            align="center",
+            method="caption",
         )
-
+        title_text_clip = title_text_clip.set_opacity(0.7).set_duration(7)
         title_text_clip = (
-            TextClip(self.file_name, color='#ebde34', size = (title_text_clip_size,None), fontsize=50, font='Lane',align = 'center',method='caption')
-            .set_opacity(0.7)
-            .set_duration(7)
-            .crossfadein(0.5)
+            title_text_clip.crossfadein(0.5)
             .crossfadeout(0.5)
-            .set_position((title_x_pos, title_y_pos))
+            .set_position((self.width // 2 - title_text_clip.w // 2, margin + title_text_clip.h // 2))
         )
-        title_text_clip.h
+
+        # Calculate the position of the order text
+        padding = 150
+        order_text_clip_size = 300
+        order_text_clip = TextClip(
+            text,
+            color="#fce303",
+            size=(title_text_clip_size, None),
+            fontsize=50,
+            font="Amiri-bold",
+            align="center",
+            method="caption",
+        )
+        order_text_clip = order_text_clip.set_opacity(0.7).set_duration(7)
+        order_text_clip = (
+            order_text_clip.crossfadein(0.5)
+            .crossfadeout(0.5)
+            .set_position((self.width // 2 - order_text_clip.w // 2,title_text_clip.h + margin + padding))
+        )
+
 
 
         composite_clip = CompositeVideoClip([subclip, order_text_clip,title_text_clip])
