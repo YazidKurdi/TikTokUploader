@@ -10,10 +10,22 @@ class YouTubeVideoSaver:
     def __init__(self, api_key):
         self.api_key = api_key
         self.youtube = build('youtube', 'v3', developerKey=config.youtube_api)
-        self.file_path = "videos_to_download.pickle"
+        self.file_path = "to_download/videos_to_download.pickle"
 
-        if os.path.isfile("videos_to_download.pickle"):
-            with open("videos_to_download.pickle", "rb") as f:
+        # Set the directory path
+        directory_path = "./to_download"
+
+        # Use a try block to check if the directory exists and create it if it doesn't
+        try:
+            # Check if the directory exists
+            if not os.path.exists(directory_path):
+                # Create the directory
+                os.makedirs(directory_path)
+        except OSError as error:
+            print(f"Failed to create directory: {error}")
+
+        if os.path.isfile("to_download/videos_to_download.pickle"):
+            with open("to_download/videos_to_download.pickle", "rb") as f:
                 self.videos = pickle.load(f)
                 self.videos = json.loads(self.videos)
         else:
@@ -48,16 +60,16 @@ class YouTubeVideoSaver:
                 is_short = duration_in_seconds <= 60
                 video_data = {'title': video_title, 'url': video_url, 'is_short': is_short}
                 if channel_title not in self.videos:
-                    self.videos[channel_title] = [video_data]
-                else:
-                    self.videos[channel_title].append(video_data)
+                    self.videos[channel_title] = {}
+                if video_id not in self.videos[channel_title]:
+                    self.videos[channel_title][video_id] = video_data
 
-    def save_videos_to_file(self):
+    def save_videos_to_file(self,file_path):
         # convert the dictionary to JSON
         json_data = json.dumps(self.videos, indent=4)
 
         # Save the updated videos dictionary to disk
-        with open(self.file_path, "wb") as f:
+        with open(file_path, "wb") as f:
             pickle.dump(json_data, f)
 
     def process_all_channels(self):
@@ -65,10 +77,15 @@ class YouTubeVideoSaver:
         config.read('channels.ini')
 
         for section in config.sections():
+            try:
+                if not os.path.exists(f"to_download/{section}"):
+                    os.makedirs(f"to_download/{section}")
+            except OSError as error:
+                print(f"Failed to create directory: {error}")
+
             for channel_id in config[section].values():
-                print(channel_id)
                 self.return_channel_metadata(channel_id)
-        self.save_videos_to_file()
+                self.save_videos_to_file(f"to_download/{section}/videos_to_download_{section}.pickle")
 
     def print_video_titles_and_urls(self):
         # Print out the list of video titles and URLs
