@@ -1,3 +1,6 @@
+import json
+import pickle
+
 from moviepy.editor import *
 import os
 
@@ -7,7 +10,7 @@ class VideoEditor:
     A class that represents a video editor.
     """
 
-    def __init__(self, file_path: str) -> None:
+    def __init__(self, file_path: str,clips_dir: str,channel_name: str) -> None:
         """
         Constructs all the necessary attributes for the VideoEditor object.
 
@@ -15,12 +18,23 @@ class VideoEditor:
         file_path (str): The path of the video file.
         """
 
+        self.channel_name = channel_name
+        self.clips_dir = clips_dir
         self.video = VideoFileClip(file_path)
         self.length = self.video.duration
         self.file_name = os.path.splitext(os.path.basename(self.video.filename))[0]
 
-        self.crop_video(self.width, self.height)
-        self.resize_video(1080, 1920)
+
+
+        # Create clips directory if it does not exist
+        if not os.path.exists("clips"):
+            os.makedirs("clips")
+
+        # Create self.file_name directory if it does not exist
+        self.file_directory = os.path.join("clips", self.channel_name)
+        if not os.path.exists(self.file_directory):
+            os.makedirs(self.file_directory)
+
 
     @property
     def width(self):
@@ -121,24 +135,58 @@ class VideoEditor:
         num_clips (int): The number of clips to be created.
         """
 
-        # Create clips directory if it does not exist
-        if not os.path.exists("clips"):
-            os.makedirs("clips")
+        if self.length <= 60:
+            subclip_file_name = f"{self.file_name}.mp4"
+            subclip_path = os.path.join(self.file_directory, subclip_file_name)
+            self.video.write_videofile(subclip_path, bitrate='2000k')
+        else:
+            self.crop_video(self.width, self.height)
+            self.resize_video(1080, 1920)
+            clip_duration = self.length / num_clips
+            for i in range(num_clips):
+                start = i * clip_duration
+                end = min(start + clip_duration, self.length)
+                subclip = self.create_subclip_with_text(start, end, f" Part {i + 1}/{num_clips}")
+                subclip_file_name = f"{self.file_name}_Part{i + 1}.mp4"
+                subclip_path = os.path.join(self.file_directory, subclip_file_name)
+                subclip.write_videofile(subclip_path, bitrate='2000k')
 
-        # Create self.file_name directory if it does not exist
-        file_name_no_ext = os.path.splitext(self.file_name)[0]
-        file_directory = os.path.join("clips", file_name_no_ext)
-        if not os.path.exists(file_directory):
-            os.makedirs(file_directory)
+class VideoSaver:
 
-        clip_duration = self.length / num_clips
-        for i in range(num_clips):
-            start = i * clip_duration
-            end = min(start + clip_duration, self.length)
-            subclip = self.create_subclip_with_text(start, end, f" Part {i + 1}/{num_clips}")
-            subclip_file_name = f"{self.file_name}_Part{i + 1}.mp4"
-            subclip_path = os.path.join(file_directory, subclip_file_name)
-            subclip.write_videofile(subclip_path,bitrate='2000k')
+    def __init__(self,videos_dir: str="downloaded_videos", clips_dir: str ="clips") -> None:
 
-l = VideoEditor('Adnan Confronts A Group Of Hindutva! Adnan and Visitor Speakers Corner.mp4')
-l.save_clips_with_text(40)
+        self.videos_dir = videos_dir
+        self.clips_dir = clips_dir
+
+
+    def load_videos(self):
+
+        if os.path.isfile("clips/edited_clips.pickle"):
+            with open("clips/edited_clips.pickle", "rb") as f:
+                edited_clips = pickle.load(f)
+                return edited_clips
+        else:
+            return set()
+
+    def edit_all_videos(self):
+        edited_clips = self.load_videos()
+        for channel_name in os.listdir(self.videos_dir):
+            channel_dir = os.path.join(self.videos_dir, channel_name)
+            if not os.path.isdir(channel_dir):
+                continue
+            for video_filename in os.listdir(channel_dir):
+                if not video_filename.endswith(".mp4"):
+                    continue
+                video_path = os.path.join(self.videos_dir, channel_name, video_filename)
+                if video_filename in edited_clips:
+                    continue
+                else:
+                    video = VideoEditor(video_path, self.clips_dir, channel_name)
+                    video.save_clips_with_text(3)
+                    edited_clips.add(video_filename)
+        with open("clips/edited_clips.pickle", "wb") as f:
+            pickle.dump(edited_clips, f)
+
+if __name__ == "__main__":
+    video_saver = VideoSaver()
+    video_saver.edit_all_videos()
