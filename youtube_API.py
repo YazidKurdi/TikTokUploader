@@ -15,6 +15,20 @@ class YouTubeVideoSaver:
         # Set the directory path
         directory_path = "./to_download"
 
+        self.create_directory(directory_path)
+
+        self.videos = self.load_videos()
+
+    def load_videos(self):
+
+        if os.path.isfile("to_download/videos_to_download.pickle"):
+            with open("to_download/videos_to_download.pickle", "rb") as f:
+                videos = pickle.load(f)
+                return json.loads(videos)
+        else:
+            return dict()
+
+    def create_directory(self,directory_path):
         # Use a try block to check if the directory exists and create it if it doesn't
         try:
             # Check if the directory exists
@@ -24,12 +38,6 @@ class YouTubeVideoSaver:
         except OSError as error:
             print(f"Failed to create directory: {error}")
 
-        if os.path.isfile("to_download/videos_to_download.pickle"):
-            with open("to_download/videos_to_download.pickle", "rb") as f:
-                self.videos = pickle.load(f)
-                self.videos = json.loads(self.videos)
-        else:
-            self.videos = {}
 
     def duration_string_to_seconds(self, duration_string):
         match = re.match('PT(\d+H)?(\d+M)?(\d+S)?', duration_string)
@@ -69,8 +77,14 @@ class YouTubeVideoSaver:
         json_data = json.dumps(self.videos, indent=4)
 
         # Save the updated videos dictionary to disk
-        with open(file_path, "wb") as f:
-            pickle.dump(json_data, f)
+        if os.path.exists(file_path):
+            # Open the file for writing and overwrite its contents
+            with open(file_path, "wb") as f:
+                pickle.dump(json_data, f)
+        else:
+            # Create a new file and write to it
+            pickle.dump(json_data, file_path)
+
 
     def process_all_channels(self):
         config = configparser.ConfigParser()
@@ -84,7 +98,7 @@ class YouTubeVideoSaver:
                 print(f"Failed to create directory: {error}")
 
             for channel_id in config[section].values():
-                self.return_channel_metadata(channel_id)
+                self.return_channel_metadata(channel_id,50)
                 self.save_videos_to_file(f"to_download/{section}/videos_to_download_{section}.pickle")
 
     def print_video_titles_and_urls(self):
