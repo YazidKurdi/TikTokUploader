@@ -1,6 +1,4 @@
-import json
 import pickle
-
 from moviepy.editor import *
 import os
 
@@ -16,6 +14,8 @@ class VideoEditor:
 
         Parameters:
         file_path (str): The path of the video file.
+        clips_dir (str): The path of the clips directory.
+        channel_name (str): The name of the channel.
         """
 
         self.channel_name = channel_name
@@ -44,7 +44,7 @@ class VideoEditor:
     def height(self):
         return self.video.size[1]
     def crop_video(self, width, height):
-        crop_width = width * 1920 / 1080
+        crop_width = width * 1280 / 720
         x1, x2 = (width - crop_width) // 2, (width + crop_width) // 2
         y1, y2 = 0, height
         self.video = vfx.crop(self.video, x1=x1, y1=y1, x2=x2, y2=y2)
@@ -83,7 +83,7 @@ class VideoEditor:
         title_text_clip = (
             title_text_clip.crossfadein(0.5)
             .crossfadeout(0.5)
-            .set_position((self.width // 2 - title_text_clip.w // 2, margin + title_text_clip.h // 2))
+            .set_position((self.width // 2 - title_text_clip.w // 2,title_text_clip.h // 2))
         )
 
         # Calculate the position of the order text
@@ -140,8 +140,8 @@ class VideoEditor:
             subclip_path = os.path.join(self.file_directory, subclip_file_name)
             self.video.write_videofile(subclip_path, bitrate='2000k')
         else:
-            self.crop_video(self.width, self.height)
-            self.resize_video(1080, 1920)
+            # self.crop_video(self.width, self.height)
+            # self.resize_video(720, 1280)
             clip_duration = self.length / num_clips
             for i in range(num_clips):
                 start = i * clip_duration
