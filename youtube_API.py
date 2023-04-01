@@ -29,9 +29,9 @@ class YouTubeVideoSaver:
 
 
         # Load videos metadata from file
-        self.videos = self.load_videos()
+        # self.videos = self.load_videos()
 
-    def load_videos(self) -> dict:
+    def load_videos(self,path) -> dict:
         """
         Loads the video data from the pickled file and returns it as a dictionary.
 
@@ -39,11 +39,11 @@ class YouTubeVideoSaver:
         videos (dict): A dictionary containing the video data.
         """
         # Check if the pickled file exists
-        if os.path.isfile(self.file_path): # Currently, not doing anything
-            with open(self.file_path, "rb") as f:
+        if os.path.isfile(path):
+            with open(path, "rb") as f:
                 # Load the pickled file and return its content as a dictionary
                 videos = pickle.load(f)
-                return json.loads(videos)
+                return videos
         else:
             # If the pickled file does not exist, return an empty dictionary
             return dict()
@@ -69,17 +69,18 @@ class YouTubeVideoSaver:
         # Calculate the total duration in seconds and return it
         return hours * 3600 + minutes * 60 + seconds
 
-    def return_channel_metadata(self, channel_id: str, max_results: int = 50) -> None:
+    def return_channel_metadata(self,topic:dict, channel_id: str, max_results: int = 50) -> dict:
         """
         Retrieves metadata of the most popular short videos for a given channel ID
         and adds the video data to the self.videos dictionary.
 
         Args:
+            topic (JSON): The topic to retrieve video metadata for (Header in channels.ini).
             channel_id (str): The ID of the channel to retrieve video metadata for.
             max_results (int): The maximum number of videos to retrieve (default 50).
 
         Returns:
-            None
+            dict: A dictionary containing the video metadata.
         """
         # Call the YouTube API to get the most popular short videos for the given channel ID
         request = self.youtube.search().list(
@@ -90,6 +91,8 @@ class YouTubeVideoSaver:
             order="viewCount"
         )
         response = request.execute()
+
+        #TODO - bottom checks should be before for loop
 
         # Iterate through each video in the response
         for item in response['items']:
@@ -114,16 +117,19 @@ class YouTubeVideoSaver:
                 video_data = {'title': video_title, 'url': video_url, 'is_short': is_short}
 
                 # Add the video data to the self.videos dictionary
-                if channel_title not in self.videos:
-                    self.videos[channel_title] = {}
-                if video_id not in self.videos[channel_title]:
-                    self.videos[channel_title][video_id] = video_data
+                if channel_title not in topic:
+                    topic[channel_title] = {}
+                if video_id not in topic[channel_title]:
+                    topic[channel_title][video_id] = video_data
 
-    def save_videos_to_file(self, file_path: str) -> None:
+        return topic
+
+    def save_videos_to_file(self,file: dict, file_path: str) -> None:
         """
         Save the updated videos dictionary to a file.
 
         Args:
+            file (dict): The videos dictionary to save.
             file_path (str): The path of the file where to save the videos dictionary.
 
         Returns:
@@ -131,11 +137,11 @@ class YouTubeVideoSaver:
 
         """
         # convert the dictionary to JSON
-        json_data = json.dumps(self.videos, indent=4)
+        # json_data = json.dumps(self.videos, indent=4)
 
         # Save the updated videos dictionary to disk
         with open(file_path, "wb") as f:
-            pickle.dump(json_data, f)
+            pickle.dump(file, f)
 
     def process_all_channels(self):
         """
@@ -166,9 +172,11 @@ class YouTubeVideoSaver:
 
             # Loop over all the channel IDs in the section
             for channel_id in config[section].values():
+                path = f"to_download/{section}/videos_to_download_{section}.pickle"
                 # Retrieve the channel metadata and save it to a file
-                self.return_channel_metadata(channel_id,50)
-                self.save_videos_to_file(f"to_download/{section}/videos_to_download_{section}.pickle")
+                topic_pickle = self.load_videos(path)
+                topic_metadata = self.return_channel_metadata(topic_pickle,channel_id,1)
+                self.save_videos_to_file(topic_metadata,path)
 
 
     def print_video_titles_and_urls(self):
