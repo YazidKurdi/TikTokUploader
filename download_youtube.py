@@ -8,7 +8,7 @@ class VideoDownloader:
     def __init__(self):
         self.to_download_path = "to_download/DAWAH/videos_to_download_DAWAH.pickle"
         self.directory_path = "downloaded_videos"
-        self.downloaded_videos_path = os.path.join(self.directory_path, "downloaded_videos.pkl")
+        self.downloaded_videos_path = os.path.join(self.directory_path, "downloaded_videos.pickle")
         self.downloaded_videos_set = self.load_downloaded_videos_set()
 
         try:
@@ -21,7 +21,7 @@ class VideoDownloader:
 
     def load_downloaded_videos_set(self):
         # Load the set of downloaded videos from a file, or create a new set
-        if os.path.isfile(self.downloaded_videos_path):
+        if os.path.isfile(self.downloaded_videos_path) and os.path.getsize(self.downloaded_videos_path) > 0:
             with open(self.downloaded_videos_path, "rb") as f:
                 return pickle.load(f)
         else:
@@ -31,7 +31,6 @@ class VideoDownloader:
         # Load the JSON object
         with open(self.to_download_path, "rb") as f:
             data = pickle.load(f)
-            data = json.loads(data)
 
         # Loop over each channel and video, downloading videos that haven't been downloaded yet
         for channel, videos in data.items():
